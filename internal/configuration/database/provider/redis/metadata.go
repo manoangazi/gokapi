@@ -90,7 +90,7 @@ func (p DatabaseProvider) DeleteMetaData(id string) {
 // IncreaseDownloadCount increases the download count of a file atomically
 func (p DatabaseProvider) IncreaseDownloadCount(id string, decreaseRemainingDownloads bool) {
 	if decreaseRemainingDownloads {
-		p.decreaseHashmapIntField(prefixMetaData+id, "DownloadsRemaining")
+		p.decreaseHashmapIntFieldFloor(prefixMetaData+id, "DownloadsRemaining")
 	}
 	p.increaseHashmapIntField(prefixMetaData+id, "DownloadCount")
 }

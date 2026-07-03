@@ -627,7 +627,10 @@ func apiDownloadSingle(w http.ResponseWriter, r requestParser, user models.User,
 	}
 	if !request.PresignUrl {
 		forceDecryption := file.Encryption.IsEncrypted && !file.Encryption.IsEndToEndEncrypted
-		storage.ServeFile(file, w, request.WebRequest, true, request.IncreaseCounter, forceDecryption, false)
+		// recheckExpiry must be true: the API download path is otherwise subject to a
+		// TOCTOU race where concurrent requests near a download-count limit each pass the
+		// pre-lock check in checkDownloadAllowed and get served, exceeding the limit.
+		storage.ServeFile(file, w, request.WebRequest, true, request.IncreaseCounter, forceDecryption, true)
 		return
 	}
 	createAndOutputPresignedUrl([]string{file.Id}, w, "")
