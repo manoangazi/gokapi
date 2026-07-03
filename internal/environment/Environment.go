@@ -75,6 +75,10 @@ type Environment struct {
 	TrustedProxies []string `env:"TRUSTED_PROXIES" envSeparator:"," envDefault:"127.0.0.1"`
 	// Set this to true if you are using Cloudflare
 	UseCloudFlare bool `env:"USE_CLOUDFLARE" envDefault:"false"`
+	// Forces the Secure attribute on all cookies even when the configured server URL is
+	// http://. Required when TLS is terminated at a reverse proxy that forwards plain HTTP
+	// to Gokapi (the browser still uses HTTPS, so cookies can and should be Secure).
+	SecureCookies bool `env:"SECURE_COOKIES" envDefault:"false"`
 	// Sets the webserver port
 	WebserverPort int `env:"PORT" envDefault:"53842" onlyPositive:"true" persistent:"true"`
 	// Allow hotlinking of videos. Note: Due to buffering, playing a video might count as
