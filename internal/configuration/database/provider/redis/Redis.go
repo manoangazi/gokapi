@@ -369,6 +369,20 @@ func (p DatabaseProvider) decreaseHashmapIntField(id string, field string) {
 	helper.Check(err)
 }
 
+// decreaseHashmapIntFieldFloor atomically decrements an integer hashmap field by 1 but
+// never below zero. Unlike the in-process apimutex (which only serialises a single
+// Gokapi instance), this guards the download counter against underflow when multiple
+// instances share one Redis backend. Key/field are bound as KEYS/ARGV, not concatenated.
+func (p DatabaseProvider) decreaseHashmapIntFieldFloor(id string, field string) {
+	conn := p.pool.Get()
+	defer conn.Close()
+	const script = `local v = tonumber(redis.call('HGET', KEYS[1], ARGV[1])) or 0
+if v > 0 then return redis.call('HINCRBY', KEYS[1], ARGV[1], -1) end
+return v`
+	_, err := conn.Do("EVAL", script, 1, p.dbPrefix+id, field)
+	helper.Check(err)
+}
+
 func (p DatabaseProvider) setHashmapField(id string, field string, content any) {
 	conn := p.pool.Get()
 	defer conn.Close()

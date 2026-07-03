@@ -153,8 +153,10 @@ func (p DatabaseProvider) SaveMetaData(file models.File) {
 // IncreaseDownloadCount increases the download count of a file atomically
 func (p DatabaseProvider) IncreaseDownloadCount(id string, decreaseRemainingDownloads bool) {
 	if decreaseRemainingDownloads {
+		// Floor guard (DownloadsRemaining > 0) prevents the counter going negative if two
+		// requests race past the expiry recheck; the counter can then never underflow.
 		_, err := p.sqliteDb.Exec(`UPDATE FileMetaData SET DownloadCount = DownloadCount + 1,
-                        DownloadsRemaining = DownloadsRemaining - 1 WHERE id = ?`, id)
+                        DownloadsRemaining = DownloadsRemaining - 1 WHERE id = ? AND DownloadsRemaining > 0`, id)
 		helper.Check(err)
 	} else {
 		_, err := p.sqliteDb.Exec(`UPDATE FileMetaData SET DownloadCount = DownloadCount + 1 WHERE id = ?`, id)
