@@ -110,6 +110,13 @@ func UsesHttps() bool {
 	return usesHttps
 }
 
+// UseSecureCookies returns true if the Secure attribute should be set on cookies. This is
+// the case when Gokapi is served over HTTPS directly, or when GOKAPI_SECURE_COOKIES forces
+// it (e.g. TLS terminated at a reverse proxy that forwards plain HTTP to Gokapi).
+func UseSecureCookies() bool {
+	return usesHttps || parsedEnvironment.SecureCookies
+}
+
 // Get returns a pointer to the server configuration
 func Get() *models.Configuration {
 	return &serverSettings

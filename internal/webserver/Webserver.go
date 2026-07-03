@@ -1149,6 +1149,7 @@ func writeFilePwCookie(w http.ResponseWriter, file models.File) {
 		Value:    downloadPasswordToken.Generate(file.Id),
 		Expires:  time.Now().Add(5 * time.Minute),
 		HttpOnly: true,
+		Secure:   configuration.UseSecureCookies(),
 		SameSite: http.SameSiteStrictMode,
 	})
 }
