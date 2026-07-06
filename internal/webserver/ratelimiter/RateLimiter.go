@@ -15,6 +15,7 @@ var newUuidLimiter = newLimiter()
 var failedLoginLimiter = newLimiter()
 var failedIdLimiter = newLimiter()
 var failedDownloadPasswordLimiter = newLimiter()
+var failedDownloadPasswordFileLimiter = newLimiter()
 var failedApiKeyLimiter = newLimiter()
 
 // isUnitTest must be false and is only set to true for running test units
@@ -61,6 +62,16 @@ func WaitOnApiAuthentication(ip string) {
 // Ten attempts without limiting, thereafter one attempt every 2 seconds
 func WaitOnDownloadPassword(ip string) {
 	_ = failedDownloadPasswordLimiter.Get(ip, 1, 20).WaitN(context.Background(), 2)
+}
+
+// WaitOnFailedDownloadPasswordForFile throttles FAILED password attempts per share ID,
+// independent of source IP, so a distributed attacker cannot bypass the per-IP limit by
+// rotating addresses against a single share. It must be called only on the failure path:
+// successful entries do not consume tokens, so a share legitimately sent to many
+// recipients is never throttled.
+// Twenty failed attempts without limiting, thereafter one attempt every 2 seconds.
+func WaitOnFailedDownloadPasswordForFile(fileId string) {
+	_ = failedDownloadPasswordFileLimiter.Get("file:"+fileId, 1, 20).WaitN(context.Background(), 2)
 }
 
 // WaitOnFailedId blocks the current goroutine until the rate limiter allows a request

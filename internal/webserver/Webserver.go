@@ -614,6 +614,9 @@ func showDownload(w http.ResponseWriter, r *http.Request) {
 			redirect(w, r, "d?id="+file.Id)
 			return
 		}
+		// Throttle per share ID on failure only, so a distributed attacker cannot bypass
+		// the per-IP limit above by rotating source addresses against one share.
+		ratelimiter.WaitOnFailedDownloadPasswordForFile(file.Id)
 		view.IsFailedLogin = true
 		view.IsPasswordView = true
 		err := templateFolder.ExecuteTemplate(w, "download_password", view)
