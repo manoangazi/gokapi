@@ -20,7 +20,7 @@ func Write(file models.File, w http.ResponseWriter, forceDownload, serveDecrypte
 		w.Header().Set("Content-Security-Policy", "sandbox")
 	}
 
-	w.Header().Set("Content-Disposition", disposition+"; filename=\""+file.Name+"\"; filename*=UTF-8''"+encodedName)
+	w.Header().Set("Content-Disposition", disposition+"; filename=\""+quoteFilename(file.Name)+"\"; filename*=UTF-8''"+encodedName)
 	if !file.RequiresClientDecryption() || serveDecrypted {
 		w.Header().Set("Content-Type", file.ContentType)
 		w.Header().Set("Content-Length", strconv.FormatInt(file.SizeBytes, 10))
@@ -32,4 +32,12 @@ func Write(file models.File, w http.ResponseWriter, forceDownload, serveDecrypte
 		w.Header().Set("Accept-Ranges", "bytes")
 		w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
 	}
+}
+
+// quoteFilename escapes a filename for safe inclusion in a quoted Content-Disposition
+// filename parameter, regardless of upstream sanitization. It drops CR/LF (header
+// injection) and backslash-escapes backslashes and double quotes (parameter breakout).
+func quoteFilename(name string) string {
+	name = strings.NewReplacer("\r", "", "\n", "").Replace(name)
+	return strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(name)
 }
