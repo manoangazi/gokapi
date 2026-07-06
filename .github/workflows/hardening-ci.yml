@@ -1,0 +1,65 @@
+name: Hardening CI
+
+# CI gate for the internal `hardening` fork: full Linux test matrix, govulncheck,
+# and a hardened-image build. Runs on the hardening branch and any PR.
+#
+# SECURITY NOTE (plan item D7): the actions below are pinned by version tag for
+# readability. Before this fork is used for production releases, convert each
+# `uses: owner/action@vTAG` to a full 40-char commit SHA (a mutable tag on a
+# third-party action is a supply-chain risk). Then add build provenance/attestation
+# and optional cosign signing to the docker job.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [hardening]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+      - run: go generate ./...
+      - name: Vet
+        run: go vet --tags=test,awsmock ./...
+      - name: Test (awsmock)
+        run: go test ./... -parallel 8 -count=1 --tags=test,awsmock
+      - name: Test (noaws)
+        run: go test ./... -parallel 8 -count=1 --tags=test,noaws
+      - name: Test (S3 via gofakes3)
+        run: GOKAPI_AWS_BUCKET="gokapi" GOKAPI_AWS_REGION="eu-central-1" GOKAPI_AWS_KEY="keyid" GOKAPI_AWS_KEY_SECRET="secret" go test ./... -count=1 --tags=test,awstest
+
+  vulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - name: Run govulncheck
+        run: govulncheck ./...
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build hardened image
+        # Build-only (no push) to validate the container layer, including the
+        # non-root user and go generate step inside the multi-stage build.
+        run: docker build -f Dockerfile.hardened -t gokapi-hardened:ci .
+      - name: Assert image runs as non-root
+        run: |
+          user=$(docker inspect --format '{{.Config.User}}' gokapi-hardened:ci)
+          echo "Image user: $user"
+          test "$user" = "10001:10001"
