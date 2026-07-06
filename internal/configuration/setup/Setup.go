@@ -21,8 +21,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/smithy-go"
 	"github.com/forceu/gokapi/internal/configuration"
 	"github.com/forceu/gokapi/internal/configuration/cloudconfig"
 	"github.com/forceu/gokapi/internal/configuration/configupgrade"
@@ -893,7 +892,7 @@ const (
 )
 
 func handleAwsError(w http.ResponseWriter, err error, operation int) {
-	var awsErr awserr.Error
+	var awsErr smithy.APIError
 	isAwsErr := errors.As(err, &awsErr)
 	var prefix string
 	switch operation {
@@ -903,9 +902,9 @@ func handleAwsError(w http.ResponseWriter, err error, operation int) {
 		prefix = "Could not get CORS settings. "
 	}
 	if isAwsErr {
-		code := awsErr.Code()
+		code := awsErr.ErrorCode()
 		switch code {
-		case s3.ErrCodeNoSuchBucket:
+		case "NoSuchBucket":
 			_, _ = w.Write([]byte("Invalid bucket or regions provided, bucket does not exist."))
 		case "Forbidden":
 			_, _ = w.Write([]byte("Unable to log in, invalid credentials."))
@@ -921,7 +920,7 @@ func handleAwsError(w http.ResponseWriter, err error, operation int) {
 				_, _ = w.Write([]byte("The requested resource could not be found, check endpoint"))
 			}
 		default:
-			_, _ = w.Write([]byte(prefix + "Error " + awsErr.Code() + ": " + err.Error()))
+			_, _ = w.Write([]byte(prefix + "Error " + awsErr.ErrorCode() + ": " + err.Error()))
 		}
 	} else {
 		_, _ = w.Write([]byte(prefix + "Error: " + err.Error()))
