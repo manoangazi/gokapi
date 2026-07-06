@@ -3,11 +3,11 @@ name: Hardening CI
 # CI gate for the internal `hardening` fork: full Linux test matrix, govulncheck,
 # and a hardened-image build. Runs on the hardening branch and any PR.
 #
-# SECURITY NOTE (plan item D7): the actions below are pinned by version tag for
-# readability. Before this fork is used for production releases, convert each
-# `uses: owner/action@vTAG` to a full 40-char commit SHA (a mutable tag on a
-# third-party action is a supply-chain risk). Then add build provenance/attestation
-# and optional cosign signing to the docker job.
+# SECURITY NOTE (plan item D7): actions are pinned by full commit SHA (a mutable tag
+# on a third-party action is a supply-chain risk); the trailing comment records the
+# human-readable version. Dependabot (.github/dependabot.yml) keeps these current.
+# Still TODO before production releases: add build provenance/attestation and
+# optional cosign signing to the docker job.
 
 on:
   workflow_dispatch:
@@ -22,8 +22,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: go.mod
           check-latest: true
@@ -40,8 +40,8 @@ jobs:
   vulncheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: go.mod
           check-latest: true
@@ -53,7 +53,7 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Build hardened image
         # Build-only (no push) to validate the container layer, including the
         # non-root user and go generate step inside the multi-stage build.
