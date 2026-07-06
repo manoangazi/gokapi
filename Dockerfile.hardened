@@ -1,0 +1,35 @@
+# Hardened multi-stage build for the internal Gokapi fork.
+#
+# Differences from the stock Dockerfile:
+#   - Runs as a dedicated NON-ROOT user by default (no su-exec/root entrypoint dance).
+#   - Built with -trimpath (no builder paths leaked in panics) and no $(date) in
+#     ldflags, so the binary is reproducible.
+#   - No curl/su-exec in the final image (smaller surface); healthcheck lives in
+#     the deployment docker-compose and uses busybox wget.
+#
+# Intended to run behind the Caddy reverse proxy in the deployment
+# docker-compose.yml, with Gokapi's own port NEVER published to the host.
+# Pin the base images by digest in CI (see plan item D7) before production use.
+
+FROM golang:1.26-alpine AS build
+RUN apk add --no-cache git
+WORKDIR /src
+COPY . .
+RUN go generate ./... && \
+    CGO_ENABLED=0 go build -trimpath \
+      -ldflags="-s -w -X 'github.com/forceu/gokapi/internal/environment.IsDocker=true' -X 'github.com/forceu/gokapi/internal/environment.Builder=Hardened Docker build'" \
+      -o /out/gokapi github.com/forceu/gokapi/cmd/gokapi
+
+FROM alpine:3.23
+RUN apk add --no-cache ca-certificates tzdata tini && \
+    addgroup -S -g 10001 gokapi && \
+    adduser -S -u 10001 -G gokapi -H -D gokapi && \
+    mkdir -p /app/data /app/config && \
+    touch /app/.isdocker && \
+    chown -R gokapi:gokapi /app
+COPY --from=build /out/gokapi /app/gokapi
+WORKDIR /app
+USER 10001:10001
+EXPOSE 53842
+# tini as PID 1 for correct signal handling / zombie reaping.
+ENTRYPOINT ["/sbin/tini", "--", "/app/gokapi"]
