@@ -212,6 +212,7 @@ func initTemplates(templateFolderEmbedded embed.FS) {
 
 	funcMap := template.FuncMap{
 		"newAdminButtonContext": newAdminButtonContext,
+		"sourceCodeUrl":         environment.SourceCodeURL,
 	}
 	if helper.FolderExists("templates") {
 		fmt.Println("Found folder 'templates', using local folder instead of internal template folder")

@@ -15,9 +15,13 @@ FROM golang:1.26-alpine AS build
 RUN apk add --no-cache git
 WORKDIR /src
 COPY . .
+# GIT_COMMIT is stamped into the binary so the AGPL "Source code" footer link can
+# point at the exact commit this image was built from. Passed by CI (github.sha);
+# empty for a plain local build, in which case the footer falls back to the branch.
+ARG GIT_COMMIT=""
 RUN go generate ./... && \
     CGO_ENABLED=0 go build -trimpath \
-      -ldflags="-s -w -X 'github.com/forceu/gokapi/internal/environment.IsDocker=true' -X 'github.com/forceu/gokapi/internal/environment.Builder=Hardened Docker build'" \
+      -ldflags="-s -w -X 'github.com/forceu/gokapi/internal/environment.IsDocker=true' -X 'github.com/forceu/gokapi/internal/environment.Builder=Hardened Docker build' -X 'github.com/forceu/gokapi/internal/environment.Commit=${GIT_COMMIT}'" \
       -o /out/gokapi github.com/forceu/gokapi/cmd/gokapi
 
 FROM alpine:3.23
