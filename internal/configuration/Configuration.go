@@ -225,9 +225,15 @@ func hashSha1(password, salt string) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
+// WARNING: the stored hash format (argon2id$salt$hash) does NOT embed these cost
+// parameters, so both HashPassword and VerifyPassword must use identical values.
+// Changing any of them will fail verification of every EXISTING stored hash (admin
+// lockout). It is safe to set them before an instance is first deployed (no hashes
+// exist yet). To change them on a populated database, first migrate the hash format
+// to a self-describing PHC string and rehash on next successful login.
 const (
 	argonTime    = 2
-	argonMemory  = 28 * 1024 // 28 MB
+	argonMemory  = 64 * 1024 // 64 MB
 	argonThreads = 1
 	argonKeyLen  = 32
 	argonSaltLen = 16
